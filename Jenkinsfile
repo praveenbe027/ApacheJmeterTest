@@ -85,7 +85,28 @@ pipeline {
 
                     if [ "${ENABLE_INFLUXDB}" = "true" ] && [ -n "${INFLUXDB_TOKEN}" ]; then
                         WRITE_URL="${INFLUXDB_URL%/}/api/v2/write?org=${INFLUXDB_ORG}&bucket=${INFLUXDB_BUCKET}"
+                        QUERY_URL="${INFLUXDB_URL%/}/api/v2/query?org=${INFLUXDB_ORG}"
                         echo "Pushing live metrics to: ${WRITE_URL}"
+
+                        echo "----- Pre-flight: writing a probe point to InfluxDB -----"
+                        set +e
+                        PROBE_TS=$(date +%s)
+                        PROBE_BODY="jmeter,application=ptetest-jmeter,probe=preflight,build=${BUILD_NUMBER} value=1 ${PROBE_TS}000000000"
+                        HTTP=$(curl -sS -o /tmp/influx_pre.out -w "%{http_code}" -X POST \
+                            -H "Authorization: Token ${INFLUXDB_TOKEN}" \
+                            -H "Content-Type: text/plain; charset=utf-8" \
+                            --data-binary "${PROBE_BODY}" \
+                            "${WRITE_URL}&precision=ns")
+                        echo "Probe write HTTP: ${HTTP}"
+                        if [ "${HTTP}" != "204" ] && [ "${HTTP}" != "200" ]; then
+                            echo "Probe write FAILED. Response body:" >&2
+                            cat /tmp/influx_pre.out >&2 || true
+                            echo "Backend Listener will not work either. Check URL/org/bucket/token/network." >&2
+                        else
+                            echo "Probe write OK -> network, org, bucket and token are valid from Jenkins."
+                        fi
+                        set -e
+
                         "${JMETER_BIN}" -n \
                             -t "ApacheJmeterTest/${JMX_FILE}" \
                             -l "${JTL_FILE}" \
@@ -98,6 +119,24 @@ pipeline {
                             -Jinfluxdb.testTitle="${JOB_NAME}-${BUILD_NUMBER}" \
                             -Jinfluxdb.samplersRegex='.*' \
                             -Jinfluxdb.summaryOnly=false
+
+                        echo "----- jmeter.log tail (last 100 lines) -----"
+                        tail -n 100 "${JMETER_LOG}" || true
+
+                        echo "----- jmeter.log Backend/Influx-related lines -----"
+                        grep -Ei 'influx|backend|HttpMetricsSender|sendMeasurement|did not respond|connection refused|401|404|400' "${JMETER_LOG}" || echo "(no influx/backend related log entries found)"
+
+                        echo "----- Post-run: counting jmeter points written in last 5 minutes -----"
+                        FLUX_QUERY='from(bucket:"'"${INFLUXDB_BUCKET}"'") |> range(start: -5m) |> filter(fn:(r)=> r._measurement == "jmeter") |> count()'
+                        set +e
+                        curl -sS -X POST \
+                            -H "Authorization: Token ${INFLUXDB_TOKEN}" \
+                            -H "Content-Type: application/vnd.flux" \
+                            -H "Accept: application/csv" \
+                            --data "${FLUX_QUERY}" \
+                            "${QUERY_URL}" || echo "(query request failed)"
+                        set -e
+                        echo "----- Done diagnostics -----"
                     else
                         echo "InfluxDB push disabled or token missing; running JMeter without backend overrides."
                         "${JMETER_BIN}" -n \
