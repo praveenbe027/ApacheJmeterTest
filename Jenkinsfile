@@ -20,12 +20,18 @@ pipeline {
     }
 
     environment {
-        JMETER_VERSION = '5.6.3'
-        JMETER_HOME    = "${WORKSPACE}/apache-jmeter-5.6.3"
-        JMETER_BIN     = "${WORKSPACE}/apache-jmeter-5.6.3/bin/jmeter"
-        JTL_FILE       = "${WORKSPACE}/results/result.jtl"
-        JMETER_LOG     = "${WORKSPACE}/results/jmeter.log"
-        REPORT_DIR     = "${WORKSPACE}/html-report"
+        JMETER_VERSION  = '5.6.3'
+        JMETER_HOME     = "${WORKSPACE}/apache-jmeter-5.6.3"
+        JMETER_BIN      = "${WORKSPACE}/apache-jmeter-5.6.3/bin/jmeter"
+        JTL_FILE        = "${WORKSPACE}/results/result.jtl"
+        JMETER_LOG      = "${WORKSPACE}/results/jmeter.log"
+        REPORT_DIR      = "${WORKSPACE}/html-report"
+        JMX_FILE        = "${params.JMX_FILE}"
+        ENABLE_INFLUXDB = "${params.ENABLE_INFLUXDB}"
+        INFLUXDB_URL    = "${params.INFLUXDB_URL}"
+        INFLUXDB_ORG    = "${params.INFLUXDB_ORG}"
+        INFLUXDB_BUCKET = "${params.INFLUXDB_BUCKET}"
+        INFLUXDB_TOKEN  = "${params.INFLUXDB_TOKEN}"
     }
 
     stages {
@@ -71,14 +77,6 @@ pipeline {
         }
 
         stage('Run JMeter Test') {
-            environment {
-                JMX_FILE        = "${params.JMX_FILE}"
-                ENABLE_INFLUXDB = "${params.ENABLE_INFLUXDB}"
-                INFLUXDB_URL    = "${params.INFLUXDB_URL}"
-                INFLUXDB_ORG    = "${params.INFLUXDB_ORG}"
-                INFLUXDB_BUCKET = "${params.INFLUXDB_BUCKET}"
-                INFLUXDB_TOKEN  = "${params.INFLUXDB_TOKEN}"
-            }
             steps {
                 sh '''
                     set -eu
