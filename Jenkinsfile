@@ -7,7 +7,7 @@ pipeline {
         string(name: 'INFLUXDB_URL',     defaultValue: 'http://host.docker.internal:8086', description: 'InfluxDB v2 base URL reachable from Jenkins')
         string(name: 'INFLUXDB_ORG',     defaultValue: 'jmetertest',                       description: 'InfluxDB organization')
         string(name: 'INFLUXDB_BUCKET',  defaultValue: 'telegraf',                         description: 'InfluxDB bucket')
-        string(name: 'INFLUXDB_TOKEN',   defaultValue: '',                                 description: 'InfluxDB API token (paste the actual value)')
+        string(name: 'INFLUXDB_TOKEN',   defaultValue: 'bb9bad5f8d27409a2ece8238093ba4aefbccb294f89789e8f8c5a3c8cce41bc6', description: 'InfluxDB API token (used as default when not overridden manually)')
         string(name: 'EMAIL_RECIPIENTS', defaultValue: 'praveenbe027@gmail.com',           description: 'Comma-separated email addresses to receive the HTML report')
     }
 
