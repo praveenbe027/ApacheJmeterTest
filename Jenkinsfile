@@ -26,12 +26,12 @@ pipeline {
         JTL_FILE        = "${WORKSPACE}/results/result.jtl"
         JMETER_LOG      = "${WORKSPACE}/results/jmeter.log"
         REPORT_DIR      = "${WORKSPACE}/html-report"
-        JMX_FILE        = "${params.JMX_FILE}"
-        ENABLE_INFLUXDB = "${params.ENABLE_INFLUXDB}"
-        INFLUXDB_URL    = "${params.INFLUXDB_URL}"
-        INFLUXDB_ORG    = "${params.INFLUXDB_ORG}"
-        INFLUXDB_BUCKET = "${params.INFLUXDB_BUCKET}"
-        INFLUXDB_TOKEN  = "${params.INFLUXDB_TOKEN}"
+        JMX_FILE        = "${params.JMX_FILE        ?: 'Thread Group.jmx'}"
+        ENABLE_INFLUXDB = "${(params.ENABLE_INFLUXDB == null) ? 'true' : params.ENABLE_INFLUXDB}"
+        INFLUXDB_URL    = "${params.INFLUXDB_URL    ?: 'http://host.docker.internal:8086'}"
+        INFLUXDB_ORG    = "${params.INFLUXDB_ORG    ?: 'jmetertest'}"
+        INFLUXDB_BUCKET = "${params.INFLUXDB_BUCKET ?: 'telegraf'}"
+        INFLUXDB_TOKEN  = "${params.INFLUXDB_TOKEN  ?: 'bb9bad5f8d27409a2ece8238093ba4aefbccb294f89789e8f8c5a3c8cce41bc6'}"
     }
 
     stages {
@@ -79,7 +79,14 @@ pipeline {
         stage('Run JMeter Test') {
             steps {
                 sh '''
-                    set -eu
+                    set -e
+                    : "${ENABLE_INFLUXDB:=true}"
+                    : "${INFLUXDB_URL:=http://host.docker.internal:8086}"
+                    : "${INFLUXDB_ORG:=jmetertest}"
+                    : "${INFLUXDB_BUCKET:=telegraf}"
+                    : "${INFLUXDB_TOKEN:=bb9bad5f8d27409a2ece8238093ba4aefbccb294f89789e8f8c5a3c8cce41bc6}"
+                    : "${JMX_FILE:=Thread Group.jmx}"
+
                     mkdir -p "$(dirname "${JTL_FILE}")"
                     rm -f "${JTL_FILE}" "${JMETER_LOG}"
 
